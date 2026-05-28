@@ -12,10 +12,10 @@ return new class extends Migration {
     {
         Schema::create('media', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->index();
             $table->string('name');
             $table->string('original_name');
-            $table->enum('type', ['image', 'video']);
+            $table->string('type');
             $table->string('disk')->default('s3');
             $table->string('path');
             $table->string('thumbnail_path')->nullable();
@@ -24,7 +24,7 @@ return new class extends Migration {
             $table->float('duration')->nullable();
             $table->unsignedInteger('width')->nullable();
             $table->unsignedInteger('height')->nullable();
-            $table->enum('status', ['pending', 'processing', 'ready', 'failed'])->default('pending');
+            $table->string('status')->default('pending');
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();

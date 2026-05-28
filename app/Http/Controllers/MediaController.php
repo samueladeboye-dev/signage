@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MediaStatus;
 use App\Jobs\ProcessMediaJob;
 use App\Models\Media;
 use Illuminate\Http\RedirectResponse;
@@ -28,10 +29,10 @@ class MediaController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->search.'%');
+            $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $media = $query->paginate(24)->through(fn (Media $item) => [
+        $media = $query->paginate(24)->through(fn(Media $item) => [
             'id' => $item->id,
             'name' => $item->name,
             'type' => $item->type,
@@ -69,7 +70,7 @@ class MediaController extends Controller
         $mimeType = $file->getMimeType();
         $type = str_starts_with($mimeType, 'image/') ? 'image' : 'video';
         $extension = $file->getClientOriginalExtension();
-        $path = 'media/'.Str::uuid().'.'.$extension;
+        $path = 'media/' . Str::uuid() . '.' . $extension;
 
         $storageDisk = config('filesystems.default');
         Storage::disk($storageDisk)->putFileAs('', $file, $path);
@@ -83,7 +84,7 @@ class MediaController extends Controller
             'path' => $path,
             'mime_type' => $mimeType,
             'size' => $file->getSize(),
-            'status' => 'pending',
+            'status' => MediaStatus::Pending->value,
         ]);
 
         ProcessMediaJob::dispatch($media);

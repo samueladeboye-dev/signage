@@ -21,7 +21,7 @@ class Screen extends Model
     {
         return [
             'last_seen_at' => 'datetime',
-            'status' => 'string',
+            'status' => \App\Enums\ScreenStatus::class,
         ];
     }
 
@@ -51,19 +51,19 @@ class Screen extends Model
 
     public function isOnline(): bool
     {
-        return $this->status === 'online';
+        return $this->status === \App\Enums\ScreenStatus::Online;
     }
 
     public function markOnline(): void
     {
-        $this->status = 'online';
+        $this->status = \App\Enums\ScreenStatus::Online;
         $this->last_seen_at = now();
         $this->save();
     }
 
     public function markOffline(): void
     {
-        $this->status = 'offline';
+        $this->status = \App\Enums\ScreenStatus::Offline;
         $this->save();
     }
 }

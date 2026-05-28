@@ -25,6 +25,8 @@ class Media extends Model
             'duration' => 'float',
             'width' => 'integer',
             'height' => 'integer',
+            'type' => \App\Enums\MediaType::class,
+            'status' => \App\Enums\MediaStatus::class,
         ];
     }
 
@@ -61,7 +63,7 @@ class Media extends Model
     public function getThumbnailUrlAttribute(): ?string
     {
         if (! $this->thumbnail_path) {
-            return $this->type === 'image' ? $this->signed_url : null;
+            return $this->type === \App\Enums\MediaType::Image ? $this->signed_url : null;
         }
 
         if (in_array($this->disk, self::CLOUD_DISKS, true)) {
@@ -77,17 +79,17 @@ class Media extends Model
 
     public function isReady(): bool
     {
-        return $this->status === 'ready';
+        return $this->status === \App\Enums\MediaStatus::Ready;
     }
 
     public function isImage(): bool
     {
-        return $this->type === 'image';
+        return $this->type === \App\Enums\MediaType::Image;
     }
 
     public function isVideo(): bool
     {
-        return $this->type === 'video';
+        return $this->type === \App\Enums\MediaType::Video;
     }
 
     /**
@@ -95,7 +97,7 @@ class Media extends Model
      */
     public function scopeReady($query): void
     {
-        $query->where('status', 'ready');
+        $query->where('status', \App\Enums\MediaStatus::Ready->value);
     }
 
     /**
@@ -103,7 +105,7 @@ class Media extends Model
      */
     public function scopeImages($query): void
     {
-        $query->where('type', 'image');
+        $query->where('type', \App\Enums\MediaType::Image->value);
     }
 
     /**
@@ -111,6 +113,6 @@ class Media extends Model
      */
     public function scopeVideos($query): void
     {
-        $query->where('type', 'video');
+        $query->where('type', \App\Enums\MediaType::Video->value);
     }
 }

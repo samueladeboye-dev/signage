@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('playlist_items', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('playlist_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('media_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('playlist_id')->index();
+            $table->foreignId('media_id')->index();
             $table->unsignedInteger('sort_order')->default(0);
             $table->unsignedInteger('duration')->nullable();
             $table->timestamps();

@@ -36,14 +36,5 @@ class DatabaseSeeder extends Seeder
             'email' => 'viewer@landmark.edu.ng',
             'role' => 'viewer',
         ]);
-
-        // Sample playlists for the admin
-        $playlists = Playlist::factory(3)->create(['user_id' => $admin->id]);
-
-        // Sample screens
-        Screen::factory(5)->create([
-            'created_by' => $admin->id,
-            'current_playlist_id' => $playlists->random()->id,
-        ]);
     }
 }

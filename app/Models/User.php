@@ -32,22 +32,23 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'role' => \App\Enums\Role::class,
         ];
     }
 
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'super_admin';
+        return $this->role === \App\Enums\Role::SuperAdmin;
     }
 
     public function isAdmin(): bool
     {
-        return in_array($this->role, ['super_admin', 'admin']);
+        return in_array($this->role, [\App\Enums\Role::SuperAdmin, \App\Enums\Role::Admin], true);
     }
 
     public function isViewer(): bool
     {
-        return $this->role === 'viewer';
+        return $this->role === \App\Enums\Role::Viewer;
     }
 
     public function screens(): HasMany

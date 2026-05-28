@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('screen_schedules', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('screen_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('playlist_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('screen_id')->index();
+            $table->foreignId('playlist_id')->index();
             $table->timestamp('starts_at')->nullable();
             $table->timestamp('ends_at')->nullable();
             $table->boolean('is_active')->default(true);

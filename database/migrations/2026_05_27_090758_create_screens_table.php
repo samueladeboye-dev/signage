@@ -12,13 +12,13 @@ return new class extends Migration {
     {
         Schema::create('screens', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('current_playlist_id')->nullable()->constrained('playlists')->nullOnDelete();
+            $table->foreignId('created_by')->index();
+            $table->foreignId('current_playlist_id')->nullable()->index();
             $table->string('name');
             $table->string('location')->nullable();
             $table->text('description')->nullable();
             $table->string('pairing_code', 8)->unique();
-            $table->enum('status', ['online', 'offline'])->default('offline');
+            $table->string('status')->default('offline');
             $table->timestamp('last_seen_at')->nullable();
             $table->string('timezone')->default('UTC');
             $table->timestamps();
