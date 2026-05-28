@@ -20,21 +20,21 @@ class DatabaseSeeder extends Seeder
         $superAdmin = User::factory()->create([
             'name' => 'Super Admin',
             'email' => 'superadmin@landmark.edu.ng',
-            'role' => 'super_admin',
+            'role' => \App\Enums\Role::SuperAdmin->value,
         ]);
 
         // Admin
         $admin = User::factory()->create([
             'name' => 'Admin User',
             'email' => 'admin@landmark.edu.ng',
-            'role' => 'admin',
+            'role' => \App\Enums\Role::Admin->value,
         ]);
 
         // Viewer
         User::factory()->create([
             'name' => 'Viewer User',
             'email' => 'viewer@landmark.edu.ng',
-            'role' => 'viewer',
+            'role' => \App\Enums\Role::Viewer->value,
         ]);
     }
 }

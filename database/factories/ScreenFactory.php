@@ -21,7 +21,7 @@ class ScreenFactory extends Factory
             'location' => fake()->randomElement(['Main Hall', 'Library', 'Cafeteria', 'Administration', 'Lecture Hall A', 'Chapel']),
             'description' => fake()->optional()->sentence(),
             'pairing_code' => strtoupper(Str::random(8)),
-            'status' => fake()->randomElement(['online', 'offline']),
+            'status' => fake()->randomElement([\App\Enums\ScreenStatus::Online->value, \App\Enums\ScreenStatus::Offline->value]),
             'last_seen_at' => fake()->optional()->dateTimeBetween('-7 days', 'now'),
             'timezone' => 'Africa/Lagos',
         ];
@@ -30,7 +30,7 @@ class ScreenFactory extends Factory
     public function online(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'online',
+            'status' => \App\Enums\ScreenStatus::Online->value,
             'last_seen_at' => now(),
         ]);
     }
@@ -38,7 +38,7 @@ class ScreenFactory extends Factory
     public function offline(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'offline',
+            'status' => \App\Enums\ScreenStatus::Offline->value,
         ]);
     }
 }

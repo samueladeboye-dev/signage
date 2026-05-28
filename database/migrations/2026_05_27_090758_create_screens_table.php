@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('location')->nullable();
             $table->text('description')->nullable();
             $table->string('pairing_code', 8)->unique();
-            $table->string('status')->default('offline');
+            $table->string('status')->default(\App\Enums\ScreenStatus::Offline->value);
             $table->timestamp('last_seen_at')->nullable();
             $table->string('timezone')->default('UTC');
             $table->timestamps();

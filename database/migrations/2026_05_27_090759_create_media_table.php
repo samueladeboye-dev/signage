@@ -24,7 +24,7 @@ return new class extends Migration {
             $table->float('duration')->nullable();
             $table->unsignedInteger('width')->nullable();
             $table->unsignedInteger('height')->nullable();
-            $table->string('status')->default('pending');
+            $table->string('status')->default(\App\Enums\MediaStatus::Pending->value);
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
