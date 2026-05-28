@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ScreenRefreshRequested;
 use App\Models\Playlist;
 use App\Models\PlaylistItem;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,8 @@ class PlaylistItemController extends Controller
             'sort_order' => $maxOrder + 1,
         ]);
 
+        $this->notifyScreens($playlist);
+
         return back()->with('success', 'Media added to playlist.');
     }
 
@@ -39,6 +42,8 @@ class PlaylistItemController extends Controller
 
         $item->update($validated);
 
+        $this->notifyScreens($playlist);
+
         return back()->with('success', 'Item updated.');
     }
 
@@ -48,10 +53,12 @@ class PlaylistItemController extends Controller
 
         $item->delete();
 
+        $this->notifyScreens($playlist);
+
         return back()->with('success', 'Item removed.');
     }
 
-    public function reorder(Request $request, Playlist $playlist): \Illuminate\Http\JsonResponse
+    public function reorder(Request $request, Playlist $playlist): RedirectResponse
     {
         $this->authorize('update', $playlist);
 
@@ -67,6 +74,17 @@ class PlaylistItemController extends Controller
                 ->update(['sort_order' => $itemData['sort_order']]);
         }
 
-        return response()->json(['message' => 'Order saved.']);
+        $this->notifyScreens($playlist);
+
+        return back();
+    }
+
+    private function notifyScreens(Playlist $playlist): void
+    {
+        $playlist->loadMissing('screens');
+
+        foreach ($playlist->screens as $screen) {
+            broadcast(new ScreenRefreshRequested($screen));
+        }
     }
 }

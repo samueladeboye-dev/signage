@@ -26,6 +26,7 @@ class ScreenController extends Controller
                 'name' => $screen->name,
                 'location' => $screen->location,
                 'pairing_code' => $screen->pairing_code,
+                'orientation' => $screen->orientation->value,
                 'status' => $screen->status,
                 'last_seen_at' => $screen->last_seen_at?->diffForHumans(),
                 'current_playlist' => $screen->currentPlaylist ? [
@@ -56,6 +57,7 @@ class ScreenController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'timezone' => ['nullable', 'string', 'max:100'],
+            'orientation' => ['nullable', 'string', 'in:landscape,portrait'],
         ]);
 
         $screen = Screen::create([
@@ -63,6 +65,7 @@ class ScreenController extends Controller
             'created_by' => $request->user()->id,
             'pairing_code' => Screen::generatePairingCode(),
             'timezone' => $validated['timezone'] ?? 'Africa/Lagos',
+            'orientation' => $validated['orientation'] ?? 'landscape',
         ]);
 
         return redirect()->route('screens.show', $screen)
@@ -84,6 +87,7 @@ class ScreenController extends Controller
                 'location' => $screen->location,
                 'description' => $screen->description,
                 'pairing_code' => $screen->pairing_code,
+                'orientation' => $screen->orientation->value,
                 'status' => $screen->status,
                 'last_seen_at' => $screen->last_seen_at?->diffForHumans(),
                 'last_seen_at_raw' => $screen->last_seen_at?->toISOString(),
@@ -114,6 +118,7 @@ class ScreenController extends Controller
             'location' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'timezone' => ['nullable', 'string', 'max:100'],
+            'orientation' => ['sometimes', 'string', 'in:landscape,portrait'],
             'current_playlist_id' => ['nullable', 'exists:playlists,id'],
         ]);
 

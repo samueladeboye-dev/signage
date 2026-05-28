@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Monitor, RefreshCw, Smartphone, Trash2 } from 'lucide-react';
 import { PairingCodeDisplay } from '@/components/screens/pairing-code-display';
 import { ScreenStatusBadge } from '@/components/screens/screen-status-badge';
 import { Button } from '@/components/ui/button';
@@ -50,9 +50,15 @@ export default function ScreenShow({ screen, playlists }: Props) {
                         <Heading title={screen.name} description={screen.location ?? undefined} />
                         <div className="mt-2 flex items-center gap-2">
                             <ScreenStatusBadge status={screen.status} />
+                            <span className="text-muted-foreground flex items-center gap-1 text-sm">
+                                {screen.orientation === 'portrait'
+                                    ? <><Smartphone className="h-3.5 w-3.5" /> Portrait 9:16</>
+                                    : <><Monitor className="h-3.5 w-3.5" /> Landscape 16:9</>
+                                }
+                            </span>
                             {screen.last_seen_at && (
                                 <span className="text-muted-foreground text-sm">
-                                    Last seen {screen.last_seen_at}
+                                    · Last seen {screen.last_seen_at}
                                 </span>
                             )}
                         </div>

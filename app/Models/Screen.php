@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\Orientation;
+use App\Enums\ScreenStatus;
 use Database\Factories\ScreenFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
-#[Fillable(['created_by', 'pairing_code', 'name', 'location', 'description', 'timezone', 'current_playlist_id'])]
+#[Fillable(['created_by', 'pairing_code', 'name', 'location', 'description', 'timezone', 'orientation', 'current_playlist_id'])]
 class Screen extends Model
 {
     /** @use HasFactory<ScreenFactory> */
@@ -21,7 +23,8 @@ class Screen extends Model
     {
         return [
             'last_seen_at' => 'datetime',
-            'status' => \App\Enums\ScreenStatus::class,
+            'status' => ScreenStatus::class,
+            'orientation' => Orientation::class,
         ];
     }
 
@@ -51,19 +54,19 @@ class Screen extends Model
 
     public function isOnline(): bool
     {
-        return $this->status === \App\Enums\ScreenStatus::Online;
+        return $this->status === ScreenStatus::Online;
     }
 
     public function markOnline(): void
     {
-        $this->status = \App\Enums\ScreenStatus::Online;
+        $this->status = ScreenStatus::Online;
         $this->last_seen_at = now();
         $this->save();
     }
 
     public function markOffline(): void
     {
-        $this->status = \App\Enums\ScreenStatus::Offline;
+        $this->status = ScreenStatus::Offline;
         $this->save();
     }
 }

@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\MediaStatus;
+use App\Enums\MediaType;
+use App\Enums\Orientation;
 use Database\Factories\MediaFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,8 +29,8 @@ class Media extends Model
             'duration' => 'float',
             'width' => 'integer',
             'height' => 'integer',
-            'type' => \App\Enums\MediaType::class,
-            'status' => \App\Enums\MediaStatus::class,
+            'type' => MediaType::class,
+            'status' => MediaStatus::class,
         ];
     }
 
@@ -63,7 +67,7 @@ class Media extends Model
     public function getThumbnailUrlAttribute(): ?string
     {
         if (! $this->thumbnail_path) {
-            return $this->type === \App\Enums\MediaType::Image ? $this->signed_url : null;
+            return $this->type === MediaType::Image ? $this->signed_url : null;
         }
 
         if (in_array($this->disk, self::CLOUD_DISKS, true)) {
@@ -77,42 +81,53 @@ class Media extends Model
         return Storage::disk($this->disk)->url($this->thumbnail_path);
     }
 
+    public function getOrientationAttribute(): ?Orientation
+    {
+        if (! $this->width || ! $this->height) {
+            return null;
+        }
+
+        return $this->width >= $this->height
+            ? Orientation::Landscape
+            : Orientation::Portrait;
+    }
+
     public function isReady(): bool
     {
-        return $this->status === \App\Enums\MediaStatus::Ready;
+        return $this->status === MediaStatus::Ready;
     }
 
     public function isImage(): bool
     {
-        return $this->type === \App\Enums\MediaType::Image;
+        return $this->type === MediaType::Image;
     }
 
     public function isVideo(): bool
     {
-        return $this->type === \App\Enums\MediaType::Video;
+        return $this->type === MediaType::Video;
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<Media>  $query
+     * @param  Builder<Media>  $query
      */
     public function scopeReady($query): void
     {
-        $query->where('status', \App\Enums\MediaStatus::Ready->value);
+        $query->where('status', MediaStatus::Ready->value);
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<Media>  $query
+     * @param  Builder<Media>  $query
      */
     public function scopeImages($query): void
     {
-        $query->where('type', \App\Enums\MediaType::Image->value);
+        $query->where('type', MediaType::Image->value);
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<Media>  $query
+     * @param  Builder<Media>  $query
      */
     public function scopeVideos($query): void
     {
-        $query->where('type', \App\Enums\MediaType::Video->value);
+        $query->where('type', MediaType::Video->value);
     }
 }

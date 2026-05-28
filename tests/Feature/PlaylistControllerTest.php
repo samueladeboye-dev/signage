@@ -1,10 +1,13 @@
 <?php
 
+use App\Events\ScreenRefreshRequested;
 use App\Models\Media;
 use App\Models\Playlist;
 use App\Models\PlaylistItem;
+use App\Models\Screen;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
@@ -155,6 +158,37 @@ test('admin can remove media from a playlist', function () {
     $this->assertDatabaseMissing('playlist_items', ['id' => $item->id]);
 });
 
+test('adding media to a playlist notifies screens currently displaying it', function () {
+    Event::fake([ScreenRefreshRequested::class]);
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $playlist = Playlist::factory()->create(['user_id' => $admin->id]);
+    $media = Media::factory()->create(['user_id' => $admin->id, 'status' => 'ready']);
+    $screen = Screen::factory()->create(['current_playlist_id' => $playlist->id]);
+
+    $this->actingAs($admin)
+        ->post("/playlists/{$playlist->id}/items", ['media_id' => $media->id])
+        ->assertRedirect();
+
+    Event::assertDispatched(ScreenRefreshRequested::class, fn ($e) => $e->screen->id === $screen->id);
+});
+
+test('removing media from a playlist notifies screens currently displaying it', function () {
+    Event::fake([ScreenRefreshRequested::class]);
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $playlist = Playlist::factory()->create(['user_id' => $admin->id]);
+    $media = Media::factory()->create(['user_id' => $admin->id, 'status' => 'ready']);
+    $item = PlaylistItem::factory()->create(['playlist_id' => $playlist->id, 'media_id' => $media->id]);
+    $screen = Screen::factory()->create(['current_playlist_id' => $playlist->id]);
+
+    $this->actingAs($admin)
+        ->delete("/playlists/{$playlist->id}/items/{$item->id}")
+        ->assertRedirect();
+
+    Event::assertDispatched(ScreenRefreshRequested::class, fn ($e) => $e->screen->id === $screen->id);
+});
+
 test('admin can reorder playlist items', function () {
     $admin = User::factory()->create(['role' => 'admin']);
     $playlist = Playlist::factory()->create(['user_id' => $admin->id]);
@@ -171,7 +205,7 @@ test('admin can reorder playlist items', function () {
                 ['id' => $item2->id, 'sort_order' => 0],
             ],
         ])
-        ->assertOk();
+        ->assertRedirect();
 
     expect($item1->fresh()->sort_order)->toBe(1);
     expect($item2->fresh()->sort_order)->toBe(0);

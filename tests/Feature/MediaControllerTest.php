@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\MediaType;
 use App\Jobs\ProcessMediaJob;
 use App\Models\Media;
 use App\Models\User;
@@ -39,8 +40,8 @@ test('viewer can view media library', function () {
         ->assertOk();
 });
 
-test('admin can upload an image and it is stored on s3', function () {
-    Storage::fake('s3');
+test('admin can upload an image and it is stored on disk', function () {
+    Storage::fake();
     Queue::fake();
 
     $admin = User::factory()->create(['role' => 'admin']);
@@ -52,15 +53,15 @@ test('admin can upload an image and it is stored on s3', function () {
 
     $media = Media::where('original_name', 'banner.jpg')->first();
     expect($media)->not->toBeNull();
-    expect($media->type)->toBe('image');
+    expect($media->type)->toBe(MediaType::Image);
     expect($media->user_id)->toBe($admin->id);
 
-    Storage::disk('s3')->assertExists($media->path);
+    Storage::disk($media->disk)->assertExists($media->path);
     Queue::assertPushed(ProcessMediaJob::class);
 });
 
 test('admin can upload a video', function () {
-    Storage::fake('s3');
+    Storage::fake();
     Queue::fake();
 
     $admin = User::factory()->create(['role' => 'admin']);
@@ -72,9 +73,9 @@ test('admin can upload a video', function () {
 
     $media = Media::where('original_name', 'promo.mp4')->first();
     expect($media)->not->toBeNull();
-    expect($media->type)->toBe('video');
+    expect($media->type)->toBe(MediaType::Video);
 
-    Storage::disk('s3')->assertExists($media->path);
+    Storage::disk($media->disk)->assertExists($media->path);
 });
 
 test('viewer cannot upload media', function () {

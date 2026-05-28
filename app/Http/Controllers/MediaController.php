@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\MediaStatus;
 use App\Jobs\ProcessMediaJob;
 use App\Models\Media;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,16 +30,27 @@ class MediaController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
-        $media = $query->paginate(24)->through(fn(Media $item) => [
+        if ($request->filled('orientation')) {
+            if ($request->orientation === 'landscape') {
+                $query->whereNotNull('width')->whereColumn('width', '>=', 'height');
+            } elseif ($request->orientation === 'portrait') {
+                $query->whereNotNull('width')->whereColumn('height', '>', 'width');
+            }
+        }
+
+        $media = $query->paginate(24)->through(fn (Media $item) => [
             'id' => $item->id,
             'name' => $item->name,
             'type' => $item->type,
             'mime_type' => $item->mime_type,
             'size' => $item->size,
             'duration' => $item->duration,
+            'width' => $item->width,
+            'height' => $item->height,
+            'orientation' => $item->orientation?->value,
             'status' => $item->status,
             'thumbnail_url' => $item->thumbnail_url,
             'url' => $item->isReady() ? $item->signed_url : null,
@@ -47,7 +59,7 @@ class MediaController extends Controller
 
         return Inertia::render('media/index', [
             'media' => $media,
-            'filters' => $request->only('type', 'status', 'search'),
+            'filters' => $request->only('type', 'status', 'search', 'orientation'),
         ]);
     }
 
@@ -70,7 +82,7 @@ class MediaController extends Controller
         $mimeType = $file->getMimeType();
         $type = str_starts_with($mimeType, 'image/') ? 'image' : 'video';
         $extension = $file->getClientOriginalExtension();
-        $path = 'media/' . Str::uuid() . '.' . $extension;
+        $path = 'media/'.Str::uuid().'.'.$extension;
 
         $storageDisk = config('filesystems.default');
         Storage::disk($storageDisk)->putFileAs('', $file, $path);
@@ -92,7 +104,7 @@ class MediaController extends Controller
         return redirect()->route('media.index')->with('success', 'Media uploaded and queued for processing.');
     }
 
-    public function show(Media $media): \Illuminate\Http\JsonResponse
+    public function show(Media $media): JsonResponse
     {
         $this->authorize('view', $media);
 

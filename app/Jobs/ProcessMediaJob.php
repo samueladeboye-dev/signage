@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\MediaType;
 use App\Models\Media;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,7 +32,7 @@ class ProcessMediaJob implements ShouldQueue
         $media->update(['status' => 'processing']);
 
         try {
-            if ($media->type === 'image') {
+            if ($media->type === MediaType::Image) {
                 $this->processImage($media);
             } else {
                 $this->processVideo($media);
@@ -50,24 +51,22 @@ class ProcessMediaJob implements ShouldQueue
 
     private function processImage(Media $media): void
     {
-        // Get image dimensions from S3 using GD or Imagick if available
-        $tempPath = tempnam(sys_get_temp_dir(), 'sig_').'.'.pathinfo($media->path, PATHINFO_EXTENSION);
+        $extension = pathinfo($media->path, PATHINFO_EXTENSION);
+        $tempPath = tempnam(sys_get_temp_dir(), 'sig_').'.'.$extension;
 
-        Storage::disk($media->disk)->copy($media->path, basename($tempPath));
-        $localTempPath = storage_path('app/'.basename($tempPath));
-        Storage::disk('local')->put(basename($tempPath), Storage::disk($media->disk)->get($media->path));
+        $stream = Storage::disk($media->disk)->readStream($media->path);
+        file_put_contents($tempPath, $stream);
 
-        if (extension_loaded('gd') && file_exists($localTempPath)) {
-            [$width, $height] = getimagesize($localTempPath) ?: [null, null];
+        if (extension_loaded('gd') && file_exists($tempPath)) {
+            [$width, $height] = getimagesize($tempPath) ?: [null, null];
             $media->update(['width' => $width, 'height' => $height]);
 
-            // Generate thumbnail (resize to 400x225)
             if ($width && $height) {
-                $this->generateImageThumbnail($media, $localTempPath);
+                $this->generateImageThumbnail($media, $tempPath);
             }
         }
 
-        @unlink($localTempPath);
+        @unlink($tempPath);
     }
 
     private function generateImageThumbnail(Media $media, string $localPath): void
@@ -93,7 +92,9 @@ class ProcessMediaJob implements ShouldQueue
         imagejpeg($thumb, $thumbLocalPath, 85);
 
         $thumbS3Path = 'thumbnails/'.Str::uuid().'.jpg';
-        Storage::disk($media->disk)->put($thumbS3Path, file_get_contents($thumbLocalPath));
+        $stream = fopen($thumbLocalPath, 'r');
+        Storage::disk($media->disk)->writeStream($thumbS3Path, $stream);
+        fclose($stream);
         $media->update(['thumbnail_path' => $thumbS3Path]);
 
         imagedestroy($image);

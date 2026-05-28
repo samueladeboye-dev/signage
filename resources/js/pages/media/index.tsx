@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Clock, Film, Image, Loader2, Trash2 } from 'lucide-react';
+import { Clock, Film, Image, Loader2, Monitor, Smartphone, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { MediaPreview } from '@/components/media/media-preview';
 import { MediaUploader } from '@/components/media/media-uploader';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Heading from '@/components/heading';
-import type { Media, MediaStatus, MediaType } from '@/types';
+import type { Media, MediaStatus, MediaType, Orientation } from '@/types';
 
 type PaginatedMedia = {
     data: Media[];
@@ -25,6 +25,7 @@ type Props = {
         type?: MediaType;
         status?: MediaStatus;
         search?: string;
+        orientation?: Orientation;
     };
 };
 
@@ -86,6 +87,24 @@ export default function MediaIndex({ media, filters }: Props) {
                     </Select>
 
                     <Select
+                        value={filters.orientation ?? 'all'}
+                        onValueChange={(v) => { handleFilter('orientation', v); }}
+                    >
+                        <SelectTrigger className="w-40">
+                            <SelectValue placeholder="All orientations" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All orientations</SelectItem>
+                            <SelectItem value="landscape">
+                                <span className="flex items-center gap-1.5"><Monitor className="h-3.5 w-3.5" /> Landscape 16:9</span>
+                            </SelectItem>
+                            <SelectItem value="portrait">
+                                <span className="flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5" /> Portrait 9:16</span>
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select
                         value={filters.status ?? 'all'}
                         onValueChange={(v) => { handleFilter('status', v); }}
                     >
@@ -120,9 +139,9 @@ export default function MediaIndex({ media, filters }: Props) {
                                 key={item.id}
                                 className="group relative overflow-hidden rounded-xl border bg-card"
                             >
-                                {/* Thumbnail */}
+                                {/* Thumbnail — portrait uses 9:16, landscape uses 16:9 */}
                                 <div
-                                    className="relative aspect-video cursor-pointer overflow-hidden bg-black/5"
+                                    className={`relative cursor-pointer overflow-hidden bg-black/5 ${item.orientation === 'portrait' ? 'aspect-[9/16]' : 'aspect-video'}`}
                                     onClick={() => { if (item.status === 'ready') { setPreview(item); } }}
                                 >
                                     {item.thumbnail_url ? (
@@ -143,8 +162,8 @@ export default function MediaIndex({ media, filters }: Props) {
                                         </div>
                                     )}
 
-                                    {/* Type badge */}
-                                    <div className="absolute top-1.5 left-1.5">
+                                    {/* Type + orientation badges */}
+                                    <div className="absolute top-1.5 left-1.5 flex flex-col gap-1">
                                         <Badge variant="secondary" className="px-1.5 py-0.5 text-xs">
                                             {item.type === 'video' ? (
                                                 <Film className="mr-1 h-2.5 w-2.5" />
@@ -153,6 +172,16 @@ export default function MediaIndex({ media, filters }: Props) {
                                             )}
                                             {item.type}
                                         </Badge>
+                                        {item.orientation && (
+                                            <Badge variant="outline" className="bg-background/80 px-1.5 py-0.5 text-xs backdrop-blur-sm">
+                                                {item.orientation === 'portrait' ? (
+                                                    <Smartphone className="mr-1 h-2.5 w-2.5" />
+                                                ) : (
+                                                    <Monitor className="mr-1 h-2.5 w-2.5" />
+                                                )}
+                                                {item.orientation === 'portrait' ? '9:16' : '16:9'}
+                                            </Badge>
+                                        )}
                                     </div>
 
                                     {/* Delete button */}

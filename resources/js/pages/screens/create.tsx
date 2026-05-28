@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { Monitor, Smartphone } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import Heading from '@/components/heading';
+import type { Orientation } from '@/types';
 
 type FormData = {
     name: string;
     location: string;
     description: string;
     timezone: string;
+    orientation: Orientation;
 };
 
 export default function ScreenCreate() {
@@ -20,6 +23,7 @@ export default function ScreenCreate() {
         location: '',
         description: '',
         timezone: 'Africa/Lagos',
+        orientation: 'landscape',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -86,6 +90,36 @@ export default function ScreenCreate() {
                                     placeholder="Africa/Lagos"
                                 />
                                 <InputError message={errors.timezone} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Screen Orientation</Label>
+                                <p className="text-muted-foreground text-xs">How is this screen physically mounted?</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setData('orientation', 'landscape'); }}
+                                        className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${data.orientation === 'landscape' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}`}
+                                    >
+                                        <Monitor className={`h-8 w-8 ${data.orientation === 'landscape' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium">Landscape</p>
+                                            <p className="text-muted-foreground text-xs">16:9 — horizontal</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setData('orientation', 'portrait'); }}
+                                        className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${data.orientation === 'portrait' ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/50'}`}
+                                    >
+                                        <Smartphone className={`h-8 w-8 ${data.orientation === 'portrait' ? 'text-primary' : 'text-muted-foreground'}`} />
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium">Portrait</p>
+                                            <p className="text-muted-foreground text-xs">9:16 — vertical</p>
+                                        </div>
+                                    </button>
+                                </div>
+                                <InputError message={errors.orientation} />
                             </div>
 
                             <div className="flex gap-3">

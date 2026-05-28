@@ -17,7 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { router } from '@inertiajs/react';
 import { Clock, Film, GripVertical, Image, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { PlaylistItem } from '@/types';
@@ -130,6 +130,10 @@ function SortableItem({ item, playlistId, onDurationChange }: SortableItemProps)
 
 export function PlaylistItemsSortable({ playlistId, items: initialItems }: Props) {
     const [items, setItems] = useState(initialItems);
+
+    useEffect(() => {
+        setItems(initialItems);
+    }, [initialItems]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),

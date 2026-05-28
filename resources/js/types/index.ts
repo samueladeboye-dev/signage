@@ -5,6 +5,9 @@ export type * from './ui';
 // ─── Roles ───────────────────────────────────────────────────────────────────
 export type Role = 'super_admin' | 'admin' | 'viewer';
 
+// ─── Orientation ─────────────────────────────────────────────────────────────
+export type Orientation = 'landscape' | 'portrait';
+
 // ─── Screens ─────────────────────────────────────────────────────────────────
 export type ScreenStatus = 'online' | 'offline';
 
@@ -14,6 +17,7 @@ export type Screen = {
     location: string | null;
     description: string | null;
     pairing_code: string;
+    orientation: Orientation;
     status: ScreenStatus;
     last_seen_at: string | null;
     last_seen_at_raw: string | null;
@@ -34,6 +38,9 @@ export type Media = {
     mime_type: string;
     size: number;
     duration: number | null;
+    width: number | null;
+    height: number | null;
+    orientation: Orientation | null;
     status: MediaStatus;
     thumbnail_url: string | null;
     url: string | null;

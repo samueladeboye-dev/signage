@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
+import { Monitor, Plus, Smartphone } from 'lucide-react';
 import { ScreenStatusBadge } from '@/components/screens/screen-status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +52,7 @@ export default function ScreensIndex({ screens }: Props) {
                                         <tr className="border-b">
                                             <th className="text-muted-foreground px-4 py-3 text-left font-medium">Name</th>
                                             <th className="text-muted-foreground px-4 py-3 text-left font-medium">Pairing Code</th>
+                                            <th className="text-muted-foreground px-4 py-3 text-left font-medium">Orientation</th>
                                             <th className="text-muted-foreground px-4 py-3 text-left font-medium">Status</th>
                                             <th className="text-muted-foreground px-4 py-3 text-left font-medium">Current Playlist</th>
                                             <th className="text-muted-foreground px-4 py-3 text-left font-medium">Last Seen</th>
@@ -76,6 +77,14 @@ export default function ScreensIndex({ screens }: Props) {
                                                     <code className="bg-muted rounded px-2 py-0.5 font-mono text-xs">
                                                         {screen.pairing_code}
                                                     </code>
+                                                </td>
+                                                <td className="text-muted-foreground px-4 py-3">
+                                                    <span className="flex items-center gap-1.5 text-sm">
+                                                        {screen.orientation === 'portrait'
+                                                            ? <><Smartphone className="h-3.5 w-3.5" /> 9:16</>
+                                                            : <><Monitor className="h-3.5 w-3.5" /> 16:9</>
+                                                        }
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <ScreenStatusBadge status={screen.status} />

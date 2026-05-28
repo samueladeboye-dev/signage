@@ -1,80 +1,138 @@
-import { useForm } from '@inertiajs/react';
-import { ImagePlus, Upload, X } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { CheckCircle, Film, Image, Loader2, Upload, X, XCircle } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export function MediaUploader() {
-    const { data, setData, post, processing, reset, progress } = useForm<{
-        file: File | null;
-        name: string;
-    }>({
-        file: null,
-        name: '',
-    });
+type QueueItem = {
+    id: string;
+    file: File;
+    status: 'pending' | 'uploading' | 'done' | 'error';
+    progress: number;
+    error?: string;
+};
 
+const ACCEPTED_TYPES = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime';
+
+function validateFile(file: File): string | null {
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) return 'Unsupported file type.';
+    const maxBytes = isVideo ? 500 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxBytes) {
+        return `Too large. Max ${isVideo ? '500 MB for videos' : '50 MB for images'}.`;
+    }
+    return null;
+}
+
+function formatSize(bytes: number): string {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+export function MediaUploader() {
+    const [queue, setQueue] = useState<QueueItem[]>([]);
+    const [uploading, setUploading] = useState(false);
     const [dragOver, setDragOver] = useState(false);
-    const [preview, setPreview] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const handleFile = useCallback((file: File) => {
-        const isVideo = file.type.startsWith('video/');
-        const maxBytes = isVideo ? 500 * 1024 * 1024 : 50 * 1024 * 1024;
-        if (file.size > maxBytes) {
-            alert(`File too large. Maximum size is ${isVideo ? '500 MB for videos' : '50 MB for images'}.`);
-            return;
-        }
-        setData('file', file);
-        setData('name', file.name.replace(/\.[^.]+$/, ''));
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => { setPreview(e.target?.result as string); };
-            reader.readAsDataURL(file);
-        } else {
-            setPreview(null);
-        }
-    }, [setData]);
+    const addFiles = useCallback((files: File[]) => {
+        const items: QueueItem[] = files.map((file) => {
+            const error = validateFile(file);
+            return {
+                id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+                file,
+                status: error ? 'error' : 'pending',
+                progress: 0,
+                error: error ?? undefined,
+            };
+        });
+        setQueue((prev) => [...prev, ...items]);
+    }, []);
 
     const handleDrop = useCallback(
         (e: React.DragEvent) => {
             e.preventDefault();
             setDragOver(false);
-            const file = e.dataTransfer.files[0];
-            if (file) { handleFile(file); }
+            addFiles(Array.from(e.dataTransfer.files));
         },
-        [handleFile],
+        [addFiles],
     );
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) { handleFile(file); }
+        if (e.target.files) {
+            addFiles(Array.from(e.target.files));
+            e.target.value = '';
+        }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!data.file) { return; }
-        post('/media', {
-            forceFormData: true,
-            onSuccess: () => {
-                reset();
-                setPreview(null);
-            },
-        });
+    const removeItem = (id: string) => {
+        setQueue((prev) => prev.filter((q) => q.id !== id));
     };
 
-    const handleClear = () => {
-        reset();
-        setPreview(null);
-        if (inputRef.current) { inputRef.current.value = ''; }
+    const clearCompleted = () => {
+        setQueue((prev) => prev.filter((q) => q.status !== 'done'));
     };
+
+    const uploadAll = async () => {
+        const pending = queue.filter((q) => q.status === 'pending');
+        if (!pending.length) return;
+
+        setUploading(true);
+
+        for (const item of pending) {
+            await new Promise<void>((resolve) => {
+                setQueue((prev) =>
+                    prev.map((q) => (q.id === item.id ? { ...q, status: 'uploading' } : q)),
+                );
+
+                router.post('/media', { file: item.file }, {
+                    forceFormData: true,
+                    preserveState: true,
+                    preserveScroll: true,
+                    onProgress: (progress) => {
+                        setQueue((prev) =>
+                            prev.map((q) =>
+                                q.id === item.id ? { ...q, progress: progress.percentage ?? 0 } : q,
+                            ),
+                        );
+                    },
+                    onSuccess: () => {
+                        setQueue((prev) =>
+                            prev.map((q) =>
+                                q.id === item.id ? { ...q, status: 'done', progress: 100 } : q,
+                            ),
+                        );
+                        resolve();
+                    },
+                    onError: (errors) => {
+                        const message = (Object.values(errors)[0] as string) ?? 'Upload failed.';
+                        setQueue((prev) =>
+                            prev.map((q) =>
+                                q.id === item.id ? { ...q, status: 'error', error: message } : q,
+                            ),
+                        );
+                        resolve();
+                    },
+                });
+            });
+        }
+
+        setUploading(false);
+        router.reload({ only: ['media'] });
+    };
+
+    const pendingCount = queue.filter((q) => q.status === 'pending').length;
+    const doneCount = queue.filter((q) => q.status === 'done').length;
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
             <div
                 className={cn(
                     'relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-colors',
-                    dragOver ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-                    data.file && 'border-primary',
+                    dragOver
+                        ? 'border-primary bg-primary/5'
+                        : 'border-muted-foreground/25 hover:border-muted-foreground/50',
                 )}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => { setDragOver(false); }}
@@ -84,51 +142,91 @@ export function MediaUploader() {
                 <input
                     ref={inputRef}
                     type="file"
-                    name="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime"
+                    accept={ACCEPTED_TYPES}
+                    multiple
                     className="hidden"
                     onChange={handleChange}
                 />
-
-                {preview ? (
-                    <img src={preview} alt="Preview" className="h-32 w-auto rounded object-contain" />
-                ) : data.file ? (
-                    <div className="text-center">
-                        <ImagePlus className="text-muted-foreground mx-auto mb-2 h-10 w-10" />
-                        <p className="text-sm font-medium">{data.file.name}</p>
-                        <p className="text-muted-foreground text-xs">
-                            {(data.file.size / 1024 / 1024).toFixed(1)} MB
-                        </p>
-                    </div>
-                ) : (
-                    <div className="text-center">
-                        <Upload className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
-                        <p className="text-sm font-medium">Drag & drop or click to upload</p>
-                        <p className="text-muted-foreground mt-1 text-xs">
-                            Images up to 50 MB &nbsp;·&nbsp; Videos (MP4, WebM, MOV) up to 500 MB
-                        </p>
-                    </div>
-                )}
+                <Upload className="text-muted-foreground mx-auto mb-3 h-10 w-10" />
+                <p className="text-sm font-medium">Drag & drop files or click to select</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                    Images up to 50 MB &nbsp;·&nbsp; Videos (MP4, WebM, MOV) up to 500 MB &nbsp;·&nbsp; Multiple files supported
+                </p>
             </div>
 
-            {data.file && (
-                <div className="flex items-center gap-3">
-                    <Button type="submit" disabled={processing} className="flex-1 sm:flex-none">
-                        {processing ? (
-                            <>
-                                <span className="mr-2">Uploading</span>
-                                {progress && <span>{progress.percentage}%</span>}
-                            </>
-                        ) : (
-                            'Upload Media'
+            {queue.length > 0 && (
+                <div className="space-y-2">
+                    {queue.map((item) => (
+                        <div key={item.id} className="flex items-center gap-3 rounded-lg border px-3 py-2">
+                            <div className="text-muted-foreground shrink-0">
+                                {item.file.type.startsWith('video/') ? (
+                                    <Film className="h-4 w-4" />
+                                ) : (
+                                    <Image className="h-4 w-4" />
+                                )}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium">{item.file.name}</p>
+                                <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                                    <span>{formatSize(item.file.size)}</span>
+                                    {item.status === 'error' && item.error && (
+                                        <span className="text-destructive">{item.error}</span>
+                                    )}
+                                </div>
+                                {item.status === 'uploading' && (
+                                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className="bg-primary h-full transition-all duration-300"
+                                            style={{ width: `${item.progress}%` }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="shrink-0">
+                                {item.status === 'uploading' ? (
+                                    <Loader2 className="text-primary h-4 w-4 animate-spin" />
+                                ) : item.status === 'done' ? (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : item.status === 'error' ? (
+                                    <XCircle className="text-destructive h-4 w-4" />
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="text-muted-foreground hover:text-foreground"
+                                        onClick={() => { removeItem(item.id); }}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+
+                    <div className="flex items-center gap-3 pt-1">
+                        <Button
+                            type="button"
+                            disabled={uploading || pendingCount === 0}
+                            onClick={uploadAll}
+                        >
+                            {uploading ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                `Upload ${pendingCount} file${pendingCount !== 1 ? 's' : ''}`
+                            )}
+                        </Button>
+                        {doneCount > 0 && (
+                            <Button type="button" variant="ghost" onClick={clearCompleted}>
+                                Clear completed
+                            </Button>
                         )}
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" onClick={handleClear}>
-                        <X className="h-4 w-4" />
-                    </Button>
-                    <span className="text-muted-foreground text-sm">{data.file.name}</span>
+                    </div>
                 </div>
             )}
-        </form>
+        </div>
     );
 }
