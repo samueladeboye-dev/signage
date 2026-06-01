@@ -6,6 +6,8 @@
   Date      : May 28, 2026
   Author    : Landmark University Signage Team
   Contact   : superadmin@landmark.edu.ng
+  Built by  : https://github.com/codedlySam
+              https://github.com/samboyecodes
 
 ================================================================================
   TABLE OF CONTENTS
