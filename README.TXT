@@ -5,7 +5,7 @@
   Version   : 1.0
   Date      : May 28, 2026
   Author    : Landmark University Signage Team
-  Contact   : superadmin@landmark.edu.ng
+  Contact   : [admin contact]
   Built by  : https://github.com/codedlySam
               https://github.com/samboyecodes
   Contributor: https://github.com/ritechoice23
@@ -90,10 +90,8 @@
 
   DEFAULT SEEDED ACCOUNTS (for development)
   ------------------------------------------
-  Email                          Password     Role
-  superadmin@landmark.edu.ng     password     Super Admin
-  admin@landmark.edu.ng          password     Admin
-  viewer@landmark.edu.ng         password     Viewer
+  Run `php artisan db:seed` to create demo accounts.
+  Credentials are defined in database/seeders/DatabaseSeeder.php.
 
 ================================================================================
   4. CORE MODULES
@@ -415,7 +413,6 @@
   1. Open your browser and navigate to http://localhost:8000
   2. You are automatically redirected to /login
   3. Enter your email and password
-     (Default: superadmin@landmark.edu.ng / password)
   4. Click "Log in"
   5. On success you land on the Dashboard at /dashboard
 
@@ -688,11 +685,11 @@
   APP_URL=http://localhost:8000       Must include port for local dev
   FILESYSTEM_DISK=public             Use "s3" in production
   DB_CONNECTION=mysql
-  DB_HOST=127.0.0.1
+  DB_HOST=your-db-host
   DB_PORT=3306
-  DB_DATABASE=signagemanager
-  DB_USERNAME=root
-  DB_PASSWORD=
+  DB_DATABASE=your-database-name
+  DB_USERNAME=your-db-username
+  DB_PASSWORD=your-db-password
   QUEUE_CONNECTION=database
   BROADCAST_CONNECTION=reverb        For real-time WebSocket signals
 
