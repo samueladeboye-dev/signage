@@ -57,6 +57,7 @@
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
         "globals": "^15.14.0",
+        "hls.js": "^1.6.16",
         "input-otp": "^1.4.2",
         "laravel-echo": "^2.3.4",
         "laravel-vite-plugin": "^3.0.0",

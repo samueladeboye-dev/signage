@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['user_id', 'name', 'original_name', 'type', 'disk', 'path', 'thumbnail_path', 'mime_type', 'size', 'duration', 'width', 'height', 'status', 'metadata'])]
+#[Fillable(['user_id', 'name', 'original_name', 'type', 'disk', 'path', 'hls_path', 'thumbnail_path', 'mime_type', 'size', 'duration', 'width', 'height', 'status', 'metadata'])]
 class Media extends Model
 {
     /** @use HasFactory<MediaFactory> */
@@ -62,6 +62,15 @@ class Media extends Model
         }
 
         return Storage::disk($this->disk)->url($this->path);
+    }
+
+    public function getHlsUrlAttribute(): ?string
+    {
+        if ($this->type !== MediaType::Video || ! $this->hls_path) {
+            return $this->signed_url;
+        }
+
+        return Storage::disk('public')->url($this->hls_path);
     }
 
     public function getThumbnailUrlAttribute(): ?string

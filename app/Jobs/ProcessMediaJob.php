@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\MediaType;
 use App\Models\Media;
+use FFMpeg\Format\Video\X264;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -17,7 +18,7 @@ class ProcessMediaJob implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 300;
+    public int $timeout = 1800;
 
     public function __construct(public readonly Media $media) {}
 
@@ -129,8 +130,37 @@ class ProcessMediaJob implements ShouldQueue
             $updates['thumbnail_path'] = $thumbPath;
 
             $media->update($updates);
+
+            // Transcode to HLS for efficient browser streaming
+            $this->generateHls($media);
         } catch (\Throwable $e) {
             Log::warning('FFmpeg video processing failed, skipping thumbnail', [
+                'media_id' => $media->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function generateHls(Media $media): void
+    {
+        try {
+            $hlsDir = 'hls/'.Str::uuid();
+            $manifestPath = $hlsDir.'/playlist.m3u8';
+
+            $format = (new X264)->setKiloBitrate(2000)->setAudioKiloBitrate(128);
+
+            FFMpeg::fromDisk($media->disk)
+                ->open($media->path)
+                ->exportForHLS()
+                ->setSegmentLength(6)
+                ->setKeyFrameInterval(48)
+                ->addFormat($format)
+                ->toDisk('public')
+                ->save($manifestPath);
+
+            $media->update(['hls_path' => $manifestPath]);
+        } catch (\Throwable $e) {
+            Log::warning('HLS transcoding failed, falling back to original video', [
                 'media_id' => $media->id,
                 'error' => $e->getMessage(),
             ]);

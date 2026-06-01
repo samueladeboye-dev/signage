@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import Hls from 'hls.js';
 import { Pause, Play, SkipBack, SkipForward, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -62,6 +63,7 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
     const [showControls, setShowControls] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hlsRef = useRef<Hls | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -109,29 +111,66 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
         });
     }, [items.length, playlist?.is_looping, transition]);
 
-    const togglePause = useCallback(() => {
-        setIsPaused((prev) => !prev);
-    }, []);
+    const togglePause = useCallback(() => { setIsPaused((prev) => !prev); }, []);
 
-    // Show controls and restart the hide timer
     const revealControls = useCallback(() => {
         setShowControls(true);
         if (controlsTimerRef.current) { clearTimeout(controlsTimerRef.current); }
         controlsTimerRef.current = setTimeout(() => { setShowControls(false); }, CONTROLS_HIDE_DELAY);
     }, []);
 
-    // Start video playback with audio; fall back to muted if browser blocks it
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || currentItem?.media.type !== 'video') { return; }
-
+    const playWithAudio = useCallback((video: HTMLVideoElement) => {
         video.muted = false;
         video.play().catch(() => {
+            // Browser blocked unmuted autoplay — mute and retry
             video.muted = true;
             setIsMuted(true);
             video.play().catch(() => {});
         });
-    }, [currentIndex, currentItem?.media.type]);
+    }, []);
+
+    // Attach HLS source to the video element whenever the current video item changes
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || currentItem?.media.type !== 'video') { return; }
+
+        const src = currentItem.media.url;
+
+        // Tear down any previous HLS instance
+        if (hlsRef.current) {
+            hlsRef.current.destroy();
+            hlsRef.current = null;
+        }
+
+        const isHlsManifest = src.endsWith('.m3u8') || src.includes('.m3u8?');
+
+        if (isHlsManifest && Hls.isSupported()) {
+            // Chrome, Firefox, Edge — use hls.js
+            const hls = new Hls({ startLevel: -1, enableWorker: true });
+            hlsRef.current = hls;
+            hls.loadSource(src);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => { playWithAudio(video); });
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+                if (data.fatal) {
+                    setLoadError(true);
+                    setTimeout(() => { advanceToNext(); }, 3000);
+                }
+            });
+        } else {
+            // Safari (native HLS) or non-HLS fallback URL
+            video.src = src;
+            video.load();
+            playWithAudio(video);
+        }
+
+        return () => {
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
+            }
+        };
+    }, [currentIndex, currentItem?.media.url, currentItem?.media.type, playWithAudio, advanceToNext]);
 
     // Sync video pause/resume when isPaused changes
     useEffect(() => {
@@ -152,12 +191,11 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
         setIsMuted(false);
     };
 
-    // Schedule next slide for images (cancelled while paused)
+    // Schedule next slide for images (frozen while paused)
     useEffect(() => {
         if (!currentItem || currentItem.media.type !== 'image' || isPaused) { return; }
 
         if (timerRef.current) { clearTimeout(timerRef.current); }
-
         timerRef.current = setTimeout(() => { advanceToNext(); }, currentItem.duration * 1000);
 
         return () => {
@@ -177,7 +215,6 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
                 // ignore
             }
         };
-
         sendHeartbeat();
         const interval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
         return () => { clearInterval(interval); };
@@ -198,15 +235,19 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
         setupEcho();
     }, [screen.pairing_code]);
 
-    // Cleanup controls timer on unmount
+    // Cleanup on unmount
     useEffect(() => () => {
+        if (hlsRef.current) { hlsRef.current.destroy(); }
         if (controlsTimerRef.current) { clearTimeout(controlsTimerRef.current); }
     }, []);
 
     const handleVideoEnded = () => { advanceToNext(); };
     const handleVideoError = () => {
-        setLoadError(true);
-        setTimeout(() => { advanceToNext(); }, 3000);
+        // Only handle errors for non-HLS (hls.js has its own error handler)
+        if (!hlsRef.current) {
+            setLoadError(true);
+            setTimeout(() => { advanceToNext(); }, 3000);
+        }
     };
 
     if (!playlist || items.length === 0) {
@@ -251,7 +292,6 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
                             <video
                                 key={currentItem.id}
                                 ref={videoRef}
-                                src={currentItem.media.url}
                                 className="h-full w-full object-contain"
                                 playsInline
                                 onEnded={handleVideoEnded}
@@ -282,10 +322,9 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
                 {/* Playback controls + progress dots — auto-hide after 3s */}
                 <div
                     className={`absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 transition-opacity duration-300 ${
-                        showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                        showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
                     }`}
                 >
-                    {/* Progress dots */}
                     {items.length > 1 && (
                         <div className="flex gap-1.5">
                             {items.map((_, i) => (
@@ -299,7 +338,6 @@ export default function PlayerShow({ screen, playlist: initialPlaylist }: Props)
                         </div>
                     )}
 
-                    {/* Control buttons */}
                     <div className="flex items-center gap-1 rounded-full bg-black/70 px-3 py-2 backdrop-blur-sm">
                         <button
                             onClick={goToPrev}

@@ -34,7 +34,7 @@ class PlayerController extends Controller
                         'id' => $item->media->id,
                         'name' => $item->media->name,
                         'type' => $item->media->type,
-                        'url' => $item->media->signed_url,
+                        'url' => $item->media->hls_url,
                         'mime_type' => $item->media->mime_type,
                         'duration' => $item->media->duration,
                     ],
