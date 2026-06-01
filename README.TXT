@@ -8,7 +8,6 @@
   Contact   : [admin contact]
   Built by  : https://github.com/codedlySam
               https://github.com/samboyecodes
-  Contributor: https://github.com/ritechoice23
 
 ================================================================================
   TABLE OF CONTENTS
